@@ -1,2 +1,11 @@
-﻿  WinMain.cpp
-  CppDX12Engine.vcxproj -> C:\Users\Gydhia\source\repos\CppDX12Engine\x64\Debug\CppDX12Engine.exe
+﻿  main.cpp
+  pixel.hlsl
+  vertex.hlsl
+  CommandQueue.cpp
+  Device.cpp
+  PipelineState.cpp
+  ShaderManager.cpp
+  SwapChain.cpp
+  TriangleRenderer.cpp
+  Génération de code en cours...
+  CppDX12Engine.vcxproj -> D:\_GTECH\04\Projet 9\CppDX12Engine\x64\Debug\CppDX12Engine.exe
