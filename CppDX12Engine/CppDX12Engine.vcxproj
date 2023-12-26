@@ -612,6 +612,7 @@
       <SDLCheck>true</SDLCheck>
       <LinkCompiled>true</LinkCompiled>
     </ClCompile>
+    <ClCompile Include="Transform.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\CommandQueue.h" />
@@ -620,6 +621,7 @@
     <ClInclude Include="Include\ShaderManager.h" />
     <ClInclude Include="Include\SwapChain.h" />
     <ClInclude Include="Include\TriangleRenderer.h" />
+    <ClInclude Include="Transform.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
