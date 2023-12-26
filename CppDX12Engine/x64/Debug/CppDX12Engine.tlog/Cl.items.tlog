@@ -1,1 +1,9 @@
-C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\WinMain.cpp;C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\x64\Debug\WinMain.obj
+C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\main.cpp;C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\x64\Debug\main.obj
+C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\Shaders\pixel.hlsl;C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\x64\Debug\pixel.obj
+C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\Shaders\vertex.hlsl;C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\x64\Debug\vertex.obj
+C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\Source\CommandQueue.cpp;C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\x64\Debug\CommandQueue.obj
+C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\Source\Device.cpp;C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\x64\Debug\Device.obj
+C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\Source\PipelineState.cpp;C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\x64\Debug\PipelineState.obj
+C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\Source\ShaderManager.cpp;C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\x64\Debug\ShaderManager.obj
+C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\Source\SwapChain.cpp;C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\x64\Debug\SwapChain.obj
+C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\Source\TriangleRenderer.cpp;C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\x64\Debug\TriangleRenderer.obj
