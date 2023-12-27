@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Shaders\pixel.hlsl">
       <RuntimeLibrary>MultiThreadedDebugDll</RuntimeLibrary>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -621,6 +622,7 @@
     <ClInclude Include="Include\ShaderManager.h" />
     <ClInclude Include="Include\SwapChain.h" />
     <ClInclude Include="Include\TriangleRenderer.h" />
+    <ClInclude Include="Mesh.h" />
     <ClInclude Include="Transform.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
