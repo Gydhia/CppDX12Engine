@@ -8,6 +8,14 @@
 using namespace DirectX;
 using namespace Microsoft::WRL;
 
+struct Vertex
+{
+    float x, y, z;
+    float u, v;
+};
+
+
+
 class Mesh
 {
 public:
