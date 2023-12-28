@@ -124,7 +124,7 @@ bool Engine::OnInit()
 		BuildShadersAndInputLayout();
 		BuildShapeGeometry();
 		BuildRenderItems();
-		BuildPSO();
+		BuildPSOs();
 
 		// Execute the initialization commands.
 		ThrowIfFailed(m_CommandList->Close());
@@ -317,7 +317,62 @@ void Engine::Update()
 
 void Engine::Draw()
 {
+	//auto cmdListAlloc = mCurrFrameResource->CmdListAlloc;
 
+	//// Reuse the memory associated with command recording.
+	//// We can only reset when the associated command lists have finished execution on the GPU.
+	//ThrowIfFailed(cmdListAlloc->Reset());
+
+	//// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
+	//// Reusing the command list reuses memory.
+	//ThrowIfFailed(m_CommandList->Reset(cmdListAlloc.Get(), m_PSOs.Get()));
+
+	//m_CommandList->RSSetViewports(1, &mScreenViewport);
+	//m_CommandList->RSSetScissorRects(1, &mScissorRect);
+
+	//// Indicate a state transition on the resource usage.
+	//m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+	//	D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+	//// Clear the back buffer and depth buffer.
+	//m_CommandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
+	//m_CommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+	//// Specify the buffers we are going to render to.
+	//m_CommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+
+	//ID3D12DescriptorHeap* descriptorHeaps[] = { mSrvDescriptorHeap.Get() };
+	//m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+
+	//m_CommandList->SetGraphicsRootSignature(m_RootSignature.Get());
+
+	//auto passCB = mCurrFrameResource->PassCB->Resource();
+	//m_CommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
+
+	//DrawRenderItems(m_CommandList.Get(), m_renderItems);
+
+	//// Indicate a state transition on the resource usage.
+	//m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+	//	D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+
+	//// Done recording commands.
+	//ThrowIfFailed(m_CommandList->Close());
+
+	//// Add the command list to the queue for execution.
+	//ID3D12CommandList* cmdsLists[] = { m_CommandList.Get() };
+	//m_CommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+
+	//// Swap the back and front buffers
+	//ThrowIfFailed(mSwapChain->Present(0, 0));
+	//mCurrBackBuffer = (mCurrBackBuffer + 1) % SwapChainBufferCount;
+
+	//// Advance the fence value to mark commands up to this fence point.
+	//mCurrFrameResource->Fence = ++mCurrentFence;
+
+	//// Add an instruction to the command queue to set a new fence point. 
+	//// Because we are on the GPU timeline, the new fence point won't be 
+	//// set until the GPU finishes processing all the commands prior to this Signal().
+	//mCommandQueue->Signal(mFence.Get(), mCurrentFence);
 }
 
 void Engine::BuildDescriptorHeaps()
@@ -475,14 +530,27 @@ std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> Engine::GetStaticSamplers()
 
 void Engine::BuildShadersAndInputLayout()
 {
-	m_Shaders["simpleVS"] = d3dUtil::CompileShader(L"Shaders\\Color.hlsl", nullptr, "VS", "vs_5_0");
-	m_Shaders["simplePS"] = d3dUtil::CompileShader(L"Shaders\\Color.hlsl", nullptr, "PS", "ps_5_0");
-
-	m_InputLayout =
+	auto textShader = std::make_unique<ShaderData>();
+	textShader->Name = "TextureShader";
+	textShader->m_vertexShader = d3dUtil::CompileShader(L"Shaders\\Color.hlsl", nullptr, "VS", "vs_5_0");
+	textShader->m_pixelShader = d3dUtil::CompileShader(L"Shaders\\Color.hlsl", nullptr, "PS", "ps_5_0");
+	textShader->m_InputLayout = 
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 	};
+	m_Shaders[textShader->Name] = std::move(textShader);
+	
+	auto colShader = std::make_unique<ShaderData>();
+	colShader->Name = "ColorShader";
+	colShader->m_vertexShader = d3dUtil::CompileShader(L"Shaders\\Color.hlsl", nullptr, "VS", "vs_5_0");
+	colShader->m_pixelShader = d3dUtil::CompileShader(L"Shaders\\Color.hlsl", nullptr, "PS", "ps_5_0");
+	colShader->m_InputLayout =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	};
+	m_Shaders[colShader->Name] = std::move(colShader);
 }
 
 void Engine::BuildRenderItems() 
@@ -504,34 +572,44 @@ void Engine::BuildRenderItems()
 	m_renderItems.push_back(std::move(cobbleQuad));
 }
 
-void Engine::BuildPSO()
+void Engine::BuildPSOs()
 {
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;
+	for (const auto& shader : m_Shaders) 
+	{
 
-	ZeroMemory(&psoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	psoDesc.InputLayout = { m_InputLayout.data(), (UINT)m_InputLayout.size() };
-	psoDesc.pRootSignature = m_RootSignature.Get();
-	psoDesc.VS =
-	{
-		reinterpret_cast<BYTE*>(m_Shaders["simpleVS"]->GetBufferPointer()),
-		m_Shaders["simpleVS"]->GetBufferSize()
-	};
-	psoDesc.PS =
-	{
-		reinterpret_cast<BYTE*>(m_Shaders["simplePS"]->GetBufferPointer()),
-		m_Shaders["simplePS"]->GetBufferSize()
-	};
-	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-	psoDesc.SampleMask = UINT_MAX;
-	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	psoDesc.NumRenderTargets = 1;
-	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	psoDesc.SampleDesc.Count = 1;
-	psoDesc.SampleDesc.Quality = 0;
-	psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSO)));
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;
+
+		ShaderData* datas = shader.second.get();
+
+		ZeroMemory(&psoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+		psoDesc.InputLayout = { datas->m_InputLayout.data(), (UINT)m_InputLayout.size() };
+		psoDesc.pRootSignature = m_RootSignature.Get();
+		psoDesc.VS =
+		{
+			reinterpret_cast<BYTE*>(datas->m_vertexShader->GetBufferPointer()),
+			datas->m_vertexShader->GetBufferSize()
+		};
+		psoDesc.PS =
+		{
+			reinterpret_cast<BYTE*>(datas->m_pixelShader->GetBufferPointer()),
+			datas->m_pixelShader->GetBufferSize()
+		};
+		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+		psoDesc.SampleMask = UINT_MAX;
+		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		psoDesc.NumRenderTargets = 1;
+		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		psoDesc.SampleDesc.Count = 1;
+		psoDesc.SampleDesc.Quality = 0;
+		psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+
+		ComPtr<ID3D12PipelineState> generatedPso;
+		ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&generatedPso)));
+
+		m_PSOs[shader.first] = generatedPso;
+	}
 }
 
 void Engine::FlushCommandQueue()

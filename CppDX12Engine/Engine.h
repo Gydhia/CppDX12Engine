@@ -14,6 +14,7 @@
 #include <memory>
 #include "d3dUtil.h"
 #include "Mesh.h"
+#include "Shader.cpp"
 
 // Link necessary d3d12 libraries.
 #pragma comment(lib,"d3dcompiler.lib")
@@ -49,7 +50,7 @@ public:
     void BuildShadersAndInputLayout();
     void BuildShapeGeometry();
     void BuildRenderItems();
-    void BuildPSO();
+    void BuildPSOs();
     void CreateTextureAndMaterial(std::string name);
     std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
 
@@ -80,8 +81,7 @@ protected:
 
     std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;
     std::unordered_map<std::string, std::unique_ptr<Texture>> m_Textures;
-    std::unordered_map<std::string, ComPtr<ID3DBlob>> m_Shaders;
-
+    std::unordered_map<std::string, std::unique_ptr<ShaderData>> m_Shaders;
 
     // Viewport dimensions.
     UINT m_width;
@@ -98,7 +98,7 @@ private:
     ComPtr<ID3D12RootSignature> m_RootSignature = nullptr;
     ComPtr<ID3D12DescriptorHeap> m_DescHeap = nullptr;
     ComPtr<ID3D12DescriptorHeap> mSrvDescriptorHeap = nullptr;
-    ComPtr<ID3D12PipelineState> m_PSO = nullptr;
+    std::unordered_map <std::string, ComPtr<ID3D12PipelineState>> m_PSOs;
 
     std::unordered_map<std::string, std::unique_ptr<Mesh>> m_Meshes;
     std::vector<std::unique_ptr<RenderItem>> m_renderItems;
