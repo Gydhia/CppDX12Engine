@@ -15,8 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Shaders\pixel.hlsl" />
-    <ClCompile Include="Shaders\vertex.hlsl" />
     <ClCompile Include="Source\CommandQueue.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

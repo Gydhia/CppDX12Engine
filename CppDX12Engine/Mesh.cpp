@@ -22,6 +22,8 @@ void Mesh::Clear()
 	// Release the resources using ComPtr's automatic Release method
 	v_bufferGPU.Reset();
 	i_bufferGPU.Reset();
+	v_bufferUploader.Reset();
+	i_bufferUploader.Reset();
 }
 
 void Mesh::SetTexture(ComPtr<ID3D12Device> device, LPCWSTR source)
@@ -34,7 +36,6 @@ void Mesh::SetTexture(ComPtr<ID3D12Device> device, LPCWSTR source)
 void Mesh::Draw(ComPtr<ID3D12GraphicsCommandList> commandList, XMMATRIX* posMatrix)
 {
 	// Assuming you have created and recorded commands into the command list elsewhere
-
 	/*
 
 	// Set necessary states and resources

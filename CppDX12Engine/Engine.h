@@ -26,12 +26,22 @@ using Microsoft::WRL::ComPtr;
 class Engine
 {
 public:
-    Engine(UINT width, UINT height, std::wstring name);
+    Engine(HINSTANCE hInstance);
+    Engine(const Engine& rhs) = delete;
+    Engine& operator=(const Engine& rhs) = delete;
+    ~Engine();
 
-    void OnInit();
-    void OnUpdate();
-    void OnRender();
+    static Engine* GetEngine();
+
+    bool OnInit();
+    bool InitMainWindow();
+    bool InitPipeline();
+
+    int Run();
+    void Draw();
+    void Update();
     void OnDestroy();
+    void FlushCommandQueue();
 
     void BuildDescriptorHeaps();
     void BuildConstantBuffers();
@@ -41,6 +51,7 @@ public:
     void BuildRenderItems();
     void BuildPSO();
     void CreateTextureAndMaterial(std::string name);
+    std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
 
     void OnKeyDown(UINT8 /*key*/) {}
     void OnKeyUp(UINT8 /*key*/) {}
@@ -54,12 +65,14 @@ public:
 protected:
     static Engine* m_Engine;
 
+    HWND MainWnd = nullptr;
+
     Microsoft::WRL::ComPtr<IDXGIFactory4> m_dxgiFactory;
     Microsoft::WRL::ComPtr<ID3D12Device> m_device;
     Microsoft::WRL::ComPtr<IDXGISwapChain> m_swapChain;
 
     Microsoft::WRL::ComPtr<ID3D12Fence> m_Fence;
-    UINT64 mCurrentFence = 0;
+    UINT64 m_CurrentFence = 0;
 
     Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_CommandQueue;
     Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_DirectCmdListAlloc;
@@ -78,6 +91,9 @@ protected:
     // Adapter info.
     bool m_useWarpDevice;
 
+    void CreateCommandObjects();
+    void CreateSwapChain();
+
 private:
     ComPtr<ID3D12RootSignature> m_RootSignature = nullptr;
     ComPtr<ID3D12DescriptorHeap> m_DescHeap = nullptr;
@@ -92,6 +108,9 @@ private:
 
     UINT m_CbvSrvDescriptorSize = 0;
 
+    UINT m_RtvDescriptorSize = 0;
+    UINT m_DsvDescriptorSize = 0;
+    UINT m_CbvSrvUavDescriptorSize = 0;
 
     // Root assets path.
     std::wstring m_assetsPath;
@@ -99,3 +118,9 @@ private:
     // Window title.
     std::wstring m_title;
 };
+
+Engine* Engine::m_Engine = nullptr;
+Engine* Engine::GetEngine()
+{
+    return m_Engine;
+}
