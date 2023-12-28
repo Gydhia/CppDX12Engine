@@ -1,6 +1,7 @@
 #include <wrl.h>
 #include <DirectXMath.h>
 #include "Engine.h"
+#include "Mesh.h"
 
 
 #define MAX_NAME_STRING 256
@@ -27,21 +28,19 @@ struct RenderItem
 	UINT ObjCBIndex = -1;
 
 	Material* Mat = nullptr;
-	MeshGeometry* Geo = nullptr;
+	Mesh* Mesh = nullptr;
 
 	// Primitive topology.
 	D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 	// DrawIndexedInstanced parameters.
 	UINT IndexCount = 0;
-	UINT StartIndexLocation = 0;
 	int BaseVertexLocation = 0;
 };
 
 
 int CALLBACK main(HINSTANCE, HINSTANCE, LPSTR, INT)
 {
-
 	/* - Initialize Global Variables - */
 
 	wcscpy_s(WindowClass, TEXT("TutorialOneClass"));
@@ -109,12 +108,11 @@ void Engine::OnInit()
 
 	m_CbvSrvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-
 	BuildDescriptorHeaps();
 	BuildConstantBuffers();
 	BuildRootSignature();
 	BuildShadersAndInputLayout();
-	BuildBoxGeometry();
+	BuildShapeGeometry();
 	BuildRenderItems();
 	BuildPSO();
 }
@@ -133,8 +131,8 @@ void Engine::BuildDescriptorHeaps()
 	ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&mSrvDescriptorHeap)));
 
 	// Create materials and fill the heap desc with it 
-	CreateTextureAndMaterial("Wood");
-	CreateTextureAndMaterial("Cobble");
+	Engine::CreateTextureAndMaterial("Wood");
+	Engine::CreateTextureAndMaterial("Cobble");
 }
 
 void Engine::CreateTextureAndMaterial(std::string name)
@@ -173,27 +171,48 @@ void Engine::CreateTextureAndMaterial(std::string name)
 	textMaterial->FresnelR0 = DirectX::XMFLOAT3(0.05f, 0.05f, 0.05f);
 	textMaterial->Roughness = 0.2f;
 
-	mMaterials[name] = std::move(textMaterial);
-	
+	m_Materials[name] = std::move(textMaterial);
+
 }
+void Engine::BuildShapeGeometry() 
+{
+	auto mesh = Mesh::CreateQuad(m_device, m_CommandList);
+	m_Meshes[mesh->Name] = std::move(mesh);
+}
+
 
 void Engine::BuildConstantBuffers()
 {
+
 }
 
 void Engine::BuildRootSignature()
 {
+
 }
 
 void Engine::BuildShadersAndInputLayout()
 {
+
 }
 
-void Engine::BuildBoxGeometry()
+void Engine::BuildRenderItems() 
 {
-}
-void Engine::BuildRenderItems() {
+	auto woodQuad = std::make_unique<RenderItem>();
+	woodQuad->ObjCBIndex = 0;
+	woodQuad->Mat = m_Materials["Wood"].get();
+	woodQuad->Mesh = m_Meshes["base_quad"].get();
+	woodQuad->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	woodQuad->IndexCount = woodQuad->Mesh->IndexCount;
+	m_renderItems.push_back(std::move(woodQuad));
 
+	auto cobbleQuad = std::make_unique<RenderItem>();
+	cobbleQuad->ObjCBIndex = 1;
+	cobbleQuad->Mat = m_Materials["Cobble"].get();
+	cobbleQuad->Mesh = m_Meshes["base_quad"].get();
+	cobbleQuad->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	cobbleQuad->IndexCount = cobbleQuad->Mesh->IndexCount;
+	m_renderItems.push_back(std::move(cobbleQuad));
 }
 
 void Engine::BuildPSO()
@@ -208,13 +227,13 @@ void Engine::BuildPSO()
 	opaquePsoDesc.pRootSignature = m_RootSignature.Get();
 	opaquePsoDesc.VS =
 	{
-		reinterpret_cast<BYTE*>(mShaders["standardVS"]->GetBufferPointer()),
-		mShaders["standardVS"]->GetBufferSize()
+		reinterpret_cast<BYTE*>(m_Shaders["standardVS"]->GetBufferPointer()),
+		m_Shaders["standardVS"]->GetBufferSize()
 	};
 	opaquePsoDesc.PS =
 	{
-		reinterpret_cast<BYTE*>(mShaders["opaquePS"]->GetBufferPointer()),
-		mShaders["opaquePS"]->GetBufferSize()
+		reinterpret_cast<BYTE*>(m_Shaders["opaquePS"]->GetBufferPointer()),
+		m_Shaders["opaquePS"]->GetBufferSize()
 	};
 	opaquePsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	opaquePsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);

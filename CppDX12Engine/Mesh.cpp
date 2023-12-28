@@ -2,9 +2,16 @@
 #include <d3d12.h>
 #include <wrl.h>
 #include <DirectXMath.h>
+#include "d3dUtil.h"
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
+
+struct Vertex
+{
+	DirectX::XMFLOAT3 Position;
+	DirectX::XMFLOAT4 Color;
+};
 
 Mesh::Mesh()
 {
@@ -19,8 +26,8 @@ Mesh::~Mesh()
 void Mesh::Clear()
 {
 	// Release the resources using ComPtr's automatic Release method
-	v_buffer.Reset();
-	i_buffer.Reset();
+	v_bufferGPU.Reset();
+	i_bufferGPU.Reset();
 }
 
 void Mesh::SetTexture(ComPtr<ID3D12Device> device, LPCWSTR source)
@@ -51,4 +58,53 @@ void Mesh::Draw(ComPtr<ID3D12GraphicsCommandList> commandList, XMMATRIX* posMatr
 	commandList->DrawIndexedInstanced(m_indexCount, 1, 0, 0, 0);
 
 	*/
+}
+
+std::unique_ptr<Mesh> Mesh::CreateQuad(ComPtr<ID3D12Device>& device, ComPtr<ID3D12GraphicsCommandList>& clist)
+{
+	auto mesh = std::make_unique<Mesh>();
+
+	// Create the vertices
+	std::vector<Vertex> vertices;
+
+	mesh->VertexCount = 4;
+	vertices.push_back(Vertex());
+	vertices.push_back(Vertex());
+	vertices.push_back(Vertex());
+	vertices.push_back(Vertex());
+
+	// Create indices
+	std::vector<std::uint16_t> indices;
+
+	mesh->IndexCount = 4;
+	indices.push_back(0);
+	indices.push_back(1);
+	indices.push_back(2);
+	indices.push_back(0);
+	indices.push_back(2);
+	indices.push_back(3);
+
+	const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
+	const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
+
+	mesh->Name = "base_quad";
+
+	ThrowIfFailed(D3DCreateBlob(vbByteSize, &mesh->v_bufferCPU));
+	CopyMemory(mesh->v_bufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+
+	ThrowIfFailed(D3DCreateBlob(ibByteSize, &mesh->i_bufferCPU));
+	CopyMemory(mesh->i_bufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+
+	mesh->v_bufferGPU = d3dUtil::CreateDefaultBuffer(device.Get(),
+		clist.Get(), vertices.data(), vbByteSize, mesh->v_bufferUploader);
+
+	mesh->i_bufferGPU = d3dUtil::CreateDefaultBuffer(device.Get(),
+		clist.Get(), indices.data(), ibByteSize, mesh->i_bufferUploader);
+
+	mesh->VertexByteStride = sizeof(Vertex);
+	mesh->VertexBufferByteSize = vbByteSize;
+	mesh->IndexFormat = DXGI_FORMAT_R16_UINT;
+	mesh->IndexBufferByteSize = ibByteSize;
+
+	return mesh;
 }

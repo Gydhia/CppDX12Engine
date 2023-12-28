@@ -13,12 +13,15 @@
 #include <unordered_map>
 #include <memory>
 #include "d3dUtil.h"
+#include "Mesh.h"
 
 // Link necessary d3d12 libraries.
 #pragma comment(lib,"d3dcompiler.lib")
 #pragma comment(lib, "D3D12.lib")
 #pragma comment(lib, "dxgi.lib")
 
+struct RenderItem;
+using Microsoft::WRL::ComPtr;
 
 class Engine
 {
@@ -34,7 +37,7 @@ public:
     void BuildConstantBuffers();
     void BuildRootSignature();
     void BuildShadersAndInputLayout();
-    void BuildBoxGeometry();
+    void BuildShapeGeometry();
     void BuildRenderItems();
     void BuildPSO();
     void CreateTextureAndMaterial(std::string name);
@@ -62,9 +65,9 @@ protected:
     Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_DirectCmdListAlloc;
     Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_CommandList;
 
-    std::unordered_map<std::string, std::unique_ptr<Material>> mMaterials;
+    std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;
     std::unordered_map<std::string, std::unique_ptr<Texture>> m_Textures;
-    std::unordered_map<std::string, ComPtr<ID3DBlob>> mShaders;
+    std::unordered_map<std::string, ComPtr<ID3DBlob>> m_Shaders;
 
 
     // Viewport dimensions.
@@ -81,6 +84,9 @@ private:
     ComPtr<ID3D12PipelineState> m_PSO = nullptr;
     ComPtr<ID3D12DescriptorHeap> mSrvDescriptorHeap = nullptr;
     ComPtr<ID3D12PipelineState> m_OpaquePSO = nullptr;
+
+    std::unordered_map<std::string, std::unique_ptr<Mesh>> m_Meshes;
+    std::vector<std::unique_ptr<RenderItem>> m_renderItems;
 
     std::vector<D3D12_INPUT_ELEMENT_DESC> m_InputLayout;
 
