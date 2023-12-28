@@ -1,1 +1,5 @@
-C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\WinMain.cpp;C:\Users\Gydhia\source\repos\CppDX12Engine\CppDX12Engine\x64\Debug\WinMain.obj
+C:\Users\Sam\CppDX12Engine\CppDX12Engine\DXDebugLayer.cpp;C:\Users\Sam\CppDX12Engine\CppDX12Engine\x64\Debug\DXDebugLayer.obj
+C:\Users\Sam\CppDX12Engine\CppDX12Engine\Device.cpp;C:\Users\Sam\CppDX12Engine\CppDX12Engine\x64\Debug\Device.obj
+C:\Users\Sam\CppDX12Engine\CppDX12Engine\Main.cpp;C:\Users\Sam\CppDX12Engine\CppDX12Engine\x64\Debug\Main.obj
+C:\Users\Sam\CppDX12Engine\CppDX12Engine\SwapChain.cpp;C:\Users\Sam\CppDX12Engine\CppDX12Engine\x64\Debug\SwapChain.obj
+C:\Users\Sam\CppDX12Engine\CppDX12Engine\WinMain.cpp;C:\Users\Sam\CppDX12Engine\CppDX12Engine\x64\Debug\WinMain.obj
