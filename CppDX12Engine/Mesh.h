@@ -6,6 +6,14 @@
 using namespace DirectX;
 using namespace Microsoft::WRL;
 
+struct Vertex
+{
+    float x, y, z;
+    float u, v;
+};
+
+
+
 class Mesh
 {
 protected:
@@ -14,6 +22,7 @@ protected:
     int m_vertexCount = 0;
     ComPtr<ID3D12Resource> v_buffer;
     ComPtr<ID3D12Resource> i_buffer;
+    Vertex* vertex;
 
 public:
     Mesh();
