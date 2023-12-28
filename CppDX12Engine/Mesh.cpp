@@ -7,12 +7,6 @@
 using namespace Microsoft::WRL;
 using namespace DirectX;
 
-struct Vertex
-{
-	DirectX::XMFLOAT3 Position;
-	DirectX::XMFLOAT4 Color;
-};
-
 Mesh::Mesh()
 {
 
@@ -68,10 +62,10 @@ std::unique_ptr<Mesh> Mesh::CreateQuad(ComPtr<ID3D12Device>& device, ComPtr<ID3D
 	std::vector<Vertex> vertices;
 
 	mesh->VertexCount = 4;
-	vertices.push_back(Vertex());
-	vertices.push_back(Vertex());
-	vertices.push_back(Vertex());
-	vertices.push_back(Vertex());
+	vertices.push_back(Vertex(0, 0, 0, 0, 1));
+	vertices.push_back(Vertex(0, 1, 0, 0, 1));
+	vertices.push_back(Vertex(1, 1, 0, 0, 1));
+	vertices.push_back(Vertex(1, 0, 0, 0, 1));
 
 	// Create indices
 	std::vector<std::uint16_t> indices;

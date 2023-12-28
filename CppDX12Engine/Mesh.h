@@ -10,10 +10,20 @@ using namespace Microsoft::WRL;
 
 struct Vertex
 {
-    float x, y, z;
-    float u, v;
-};
+    DirectX::XMFLOAT3 Position;
+    DirectX::XMFLOAT2 UV;
 
+    Vertex(
+        const DirectX::XMFLOAT3& p,
+        const DirectX::XMFLOAT2& uv) :
+        Position(p),
+        UV(uv) {}
+    Vertex(
+        float px, float py, float pz,
+        float u, float v) :
+        Position(px, py, pz),
+        UV(u, v) {}
+};
 
 
 class Mesh
@@ -66,5 +76,4 @@ public:
 
     ComPtr<ID3D12Resource> v_bufferUploader = nullptr;
     ComPtr<ID3D12Resource> i_bufferUploader = nullptr;
-
 };
