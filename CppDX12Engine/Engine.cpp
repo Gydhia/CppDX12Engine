@@ -16,6 +16,12 @@ INT				WindowHeight;
 
 using Microsoft::WRL::ComPtr;
 
+struct ObjectConstants
+{
+	XMFLOAT4X4 WorldViewProj = MathHelper::Identity4x4();
+};
+
+
 struct RenderItem
 {
 	RenderItem() = default;
@@ -50,6 +56,10 @@ Engine::~Engine()
 
 int WINAPI main(HINSTANCE, HINSTANCE hInstance, LPSTR, INT)
 {
+#if defined(DEBUG) | defined(_DEBUG)
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+
 	wcscpy_s(WindowClass, TEXT("TutorialOneClass"));
 	wcscpy_s(WindowTitle, TEXT("Our First Window"));
 	
@@ -102,20 +112,27 @@ bool Engine::OnInit()
 	
 	if(!InitPipeline())
 		return false;
-
-	ThrowIfFailed(m_CommandList->Reset(m_DirectCmdListAlloc.Get(), nullptr));
-
-	m_CbvSrvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	
 	try 
 	{
+		ThrowIfFailed(m_CommandList->Reset(m_DirectCmdListAlloc.Get(), nullptr));
+
+		m_CbvSrvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
 		BuildDescriptorHeaps();
-		BuildConstantBuffers();
 		BuildRootSignature();
 		BuildShadersAndInputLayout();
 		BuildShapeGeometry();
 		BuildRenderItems();
 		BuildPSO();
+
+		// Execute the initialization commands.
+		ThrowIfFailed(m_CommandList->Close());
+		ID3D12CommandList* cmdsLists[] = { m_CommandList.Get() };
+		m_CommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+
+		// Wait until initialization is complete.
+		FlushCommandQueue();
 	}
 	catch (DxException& e)
 	{
@@ -284,7 +301,18 @@ void Engine::CreateSwapChain()
 
 void Engine::Update() 
 {
+	// Convert Spherical to Cartesian coordinates.
+	m_EyePos.x = m_Radius * sinf(m_Phi) * cosf(m_Theta);
+	m_EyePos.z = m_Radius * sinf(m_Phi) * sinf(m_Theta);
+	m_EyePos.y = m_Radius * cosf(m_Phi);
 
+	// Build the view matrix.
+	XMVECTOR pos = XMVectorSet(m_EyePos.x, m_EyePos.y, m_EyePos.z, 1.0f);
+	XMVECTOR target = XMVectorZero();
+	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+	XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
+	XMStoreFloat4x4(&mView, view);
 }
 
 void Engine::Draw()
@@ -350,30 +378,26 @@ void Engine::BuildShapeGeometry()
 	m_Meshes[mesh->Name] = std::move(mesh);
 }
 
-
-void Engine::BuildConstantBuffers()
-{
-
-}
-
 void Engine::BuildRootSignature()
 {
 	CD3DX12_DESCRIPTOR_RANGE texTable;
 	texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 
-	// Root parameter can be a table, root descriptor, or root constants.
-	CD3DX12_ROOT_PARAMETER slotRootParameter[2];
+	// Root parameter can be a table, root descriptor or root constants.
+	CD3DX12_ROOT_PARAMETER slotRootParameter[4];
 
-	// Texture (SRV) descriptor table
+	// Perfomance TIP: Order from most frequent to least frequent.
 	slotRootParameter[0].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_PIXEL);
-
-	// Constant buffer view for cbPerObject
 	slotRootParameter[1].InitAsConstantBufferView(0);
 
-	// A root signature is an array of root parameters.
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(2, slotRootParameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	auto staticSamplers = GetStaticSamplers();
 
-	// Create a root signature with a slot for the texture (SRV) and constant buffer.
+	// A root signature is an array of root parameters.
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(2, slotRootParameter,
+		(UINT)staticSamplers.size(), staticSamplers.data(),
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
 	ComPtr<ID3DBlob> serializedRootSig = nullptr;
 	ComPtr<ID3DBlob> errorBlob = nullptr;
 	HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
@@ -451,8 +475,8 @@ std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> Engine::GetStaticSamplers()
 
 void Engine::BuildShadersAndInputLayout()
 {
-	m_Shaders["simpleVS"] = d3dUtil::CompileShader(L"Shaders\\Default.hlsl", nullptr, "VS", "vs_5_0");
-	m_Shaders["simplePS"] = d3dUtil::CompileShader(L"Shaders\\Default.hlsl", nullptr, "PS", "ps_5_0");
+	m_Shaders["simpleVS"] = d3dUtil::CompileShader(L"Shaders\\Color.hlsl", nullptr, "VS", "vs_5_0");
+	m_Shaders["simplePS"] = d3dUtil::CompileShader(L"Shaders\\Color.hlsl", nullptr, "PS", "ps_5_0");
 
 	m_InputLayout =
 	{
@@ -482,35 +506,32 @@ void Engine::BuildRenderItems()
 
 void Engine::BuildPSO()
 {
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC opaquePsoDesc;
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;
 
-	//
-	// PSO for opaque objects.
-	//
-	ZeroMemory(&opaquePsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	opaquePsoDesc.InputLayout = { m_InputLayout.data(), (UINT)m_InputLayout.size() };
-	opaquePsoDesc.pRootSignature = m_RootSignature.Get();
-	opaquePsoDesc.VS =
+	ZeroMemory(&psoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+	psoDesc.InputLayout = { m_InputLayout.data(), (UINT)m_InputLayout.size() };
+	psoDesc.pRootSignature = m_RootSignature.Get();
+	psoDesc.VS =
 	{
-		reinterpret_cast<BYTE*>(m_Shaders["standardVS"]->GetBufferPointer()),
-		m_Shaders["standardVS"]->GetBufferSize()
+		reinterpret_cast<BYTE*>(m_Shaders["simpleVS"]->GetBufferPointer()),
+		m_Shaders["simpleVS"]->GetBufferSize()
 	};
-	opaquePsoDesc.PS =
+	psoDesc.PS =
 	{
-		reinterpret_cast<BYTE*>(m_Shaders["opaquePS"]->GetBufferPointer()),
-		m_Shaders["opaquePS"]->GetBufferSize()
+		reinterpret_cast<BYTE*>(m_Shaders["simplePS"]->GetBufferPointer()),
+		m_Shaders["simplePS"]->GetBufferSize()
 	};
-	opaquePsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	opaquePsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	opaquePsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-	opaquePsoDesc.SampleMask = UINT_MAX;
-	opaquePsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	opaquePsoDesc.NumRenderTargets = 1;
-	opaquePsoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	opaquePsoDesc.SampleDesc.Count = 1;
-	opaquePsoDesc.SampleDesc.Quality = 0;
-	opaquePsoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&opaquePsoDesc, IID_PPV_ARGS(&m_OpaquePSO)));
+	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	psoDesc.SampleMask = UINT_MAX;
+	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	psoDesc.NumRenderTargets = 1;
+	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	psoDesc.SampleDesc.Count = 1;
+	psoDesc.SampleDesc.Quality = 0;
+	psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSO)));
 }
 
 void Engine::FlushCommandQueue()

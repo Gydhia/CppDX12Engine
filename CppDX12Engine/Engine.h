@@ -97,9 +97,8 @@ protected:
 private:
     ComPtr<ID3D12RootSignature> m_RootSignature = nullptr;
     ComPtr<ID3D12DescriptorHeap> m_DescHeap = nullptr;
-    ComPtr<ID3D12PipelineState> m_PSO = nullptr;
     ComPtr<ID3D12DescriptorHeap> mSrvDescriptorHeap = nullptr;
-    ComPtr<ID3D12PipelineState> m_OpaquePSO = nullptr;
+    ComPtr<ID3D12PipelineState> m_PSO = nullptr;
 
     std::unordered_map<std::string, std::unique_ptr<Mesh>> m_Meshes;
     std::vector<std::unique_ptr<RenderItem>> m_renderItems;
@@ -111,6 +110,19 @@ private:
     UINT m_RtvDescriptorSize = 0;
     UINT m_DsvDescriptorSize = 0;
     UINT m_CbvSrvUavDescriptorSize = 0;
+
+
+    XMFLOAT4X4 mWorld = MathHelper::Identity4x4();
+    XMFLOAT4X4 mView = MathHelper::Identity4x4();
+    XMFLOAT4X4 mProj = MathHelper::Identity4x4();
+
+    XMFLOAT3 m_EyePos = { 0.0f, 0.0f, 0.0f };
+
+    float m_Theta = 1.5f * XM_PI;
+    float m_Phi = XM_PIDIV4;
+    float m_Radius = 5.0f;
+
+    POINT mLastMousePos;
 
     // Root assets path.
     std::wstring m_assetsPath;
