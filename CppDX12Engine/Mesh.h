@@ -34,7 +34,6 @@ public:
     void Update() {};
     void Clear();
     static std::unique_ptr<Mesh> CreateQuad(ComPtr<ID3D12Device>&, ComPtr <ID3D12GraphicsCommandList>&);
-    void SetTexture(ComPtr<ID3D12Device> device, LPCWSTR source);
     void Draw(ComPtr<ID3D12GraphicsCommandList> commandList, XMMATRIX* posMatrix);
 
     std::string Name;
@@ -76,4 +75,6 @@ public:
 
     ComPtr<ID3D12Resource> v_bufferUploader = nullptr;
     ComPtr<ID3D12Resource> i_bufferUploader = nullptr;
+
+    D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 };

@@ -21,6 +21,7 @@
 #pragma comment(lib, "D3D12.lib")
 #pragma comment(lib, "dxgi.lib")
 
+struct TextureMaterial;
 struct RenderItem;
 using Microsoft::WRL::ComPtr;
 
@@ -76,9 +77,17 @@ protected:
     Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_DirectCmdListAlloc;
     Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_CommandList;
 
-    std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;
+    std::unordered_map<std::string, std::unique_ptr<TextureMaterial>> m_Materials;
     std::unordered_map<std::string, std::unique_ptr<Texture>> m_Textures;
     std::unordered_map<std::string, std::unique_ptr<Shader>> m_Shaders;
+
+    int m_CurrBackBuffer = 0;
+    Microsoft::WRL::ComPtr<ID3D12Resource> mSwapChainBuffer[2];
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_RtvHeap;
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DsvHeap;
+
+    D3D12_VIEWPORT m_ScreenViewport;
+    D3D12_RECT m_ScissorRect;
 
     // Viewport dimensions.
     UINT m_width;
@@ -91,11 +100,15 @@ protected:
     void CreateCommandObjects();
     void CreateSwapChain();
 
+
+    ID3D12Resource* CurrentBackBuffer()const;
+    D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView()const;
+    D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView()const;
+
 private:
     ComPtr<ID3D12RootSignature> m_RootSignature = nullptr;
     ComPtr<ID3D12DescriptorHeap> m_DescHeap = nullptr;
-    ComPtr<ID3D12DescriptorHeap> mSrvDescriptorHeap = nullptr;
-    std::unordered_map <std::string, ComPtr<ID3D12PipelineState>> m_PSOs;
+    ComPtr<ID3D12DescriptorHeap> m_SrvDescriptorHeap = nullptr;
 
     std::unordered_map<std::string, std::unique_ptr<Mesh>> m_Meshes;
     std::vector<std::unique_ptr<RenderItem>> m_renderItems;
@@ -130,4 +143,22 @@ Engine* Engine::m_Engine = nullptr;
 Engine* Engine::GetEngine()
 {
     return m_Engine;
+}
+
+ID3D12Resource* Engine::CurrentBackBuffer() const
+{
+    return mSwapChainBuffer[m_CurrBackBuffer].Get();
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE Engine::CurrentBackBufferView() const
+{
+    return CD3DX12_CPU_DESCRIPTOR_HANDLE(
+        m_RtvHeap->GetCPUDescriptorHandleForHeapStart(),
+        m_CurrBackBuffer,
+        m_RtvDescriptorSize);
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE Engine::DepthStencilView()const
+{
+    return m_DsvHeap->GetCPUDescriptorHandleForHeapStart();
 }

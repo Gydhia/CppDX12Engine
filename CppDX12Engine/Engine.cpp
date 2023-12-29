@@ -19,30 +19,30 @@ using Microsoft::WRL::ComPtr;
 
 struct ObjectConstants
 {
-	XMFLOAT4X4 WorldViewProj = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 World = MathHelper::Identity4x4();
 };
 
+
+struct TextureMaterial
+{
+	TextureMaterial() = default;
+
+	std::string Name;
+
+	Shader* Shader = nullptr;
+	Texture* Texture = nullptr;
+};
 
 struct RenderItem
 {
 	RenderItem() = default;
 
+	std::string Name;
+
 	DirectX::XMFLOAT4X4 World = MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 TexTransform = MathHelper::Identity4x4();
 
-
-	// Index into GPU constant buffer corresponding to the ObjectCB for this render item.
-	UINT ObjCBIndex = -1;
-
-	Material* Mat = nullptr;
+	TextureMaterial* Mat = nullptr;
 	Mesh* Mesh = nullptr;
-
-	// Primitive topology.
-	D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-
-	// DrawIndexedInstanced parameters.
-	UINT IndexCount = 0;
-	int BaseVertexLocation = 0;
 };
 
 Engine::Engine(HINSTANCE hInstance)
@@ -312,76 +312,112 @@ void Engine::Update()
 
 	XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
 	XMStoreFloat4x4(&mView, view);
+
+	// Update materials
+	for (auto& e : m_renderItems)
+	{
+		XMMATRIX world = XMLoadFloat4x4(&e->World);
+
+		ObjectConstants objConstants;
+		XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
+	}
 }
 
 void Engine::Draw()
 {
-	//auto cmdListAlloc = mCurrFrameResource->CmdListAlloc;
+	// Reset the command list and set necessary states
+	ThrowIfFailed(m_CommandList->Reset(m_DirectCmdListAlloc.Get(), nullptr));
 
-	//// Reuse the memory associated with command recording.
-	//// We can only reset when the associated command lists have finished execution on the GPU.
-	//ThrowIfFailed(cmdListAlloc->Reset());
+	// Set the viewport and scissor rectangle
+	m_CommandList->RSSetViewports(1, &m_ScreenViewport);
+	m_CommandList->RSSetScissorRects(1, &m_ScissorRect);
 
-	//// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
-	//// Reusing the command list reuses memory.
-	//ThrowIfFailed(m_CommandList->Reset(cmdListAlloc.Get(), m_PSOs.Get()));
+	// Transition the swap chain back buffer to the render target state
+	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	m_CommandList->ResourceBarrier(1, &barrier);
 
-	//m_CommandList->RSSetViewports(1, &mScreenViewport);
-	//m_CommandList->RSSetScissorRects(1, &mScissorRect);
+	// Clear the back buffer and depth buffer
+	m_CommandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
+	m_CommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-	//// Indicate a state transition on the resource usage.
-	//m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
-	//	D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	// Set the render target and depth/stencil buffer
+	D3D12_CPU_DESCRIPTOR_HANDLE cBBView = CurrentBackBufferView();
+	D3D12_CPU_DESCRIPTOR_HANDLE dSView = DepthStencilView();
+	m_CommandList->OMSetRenderTargets(1, &cBBView, true, &dSView);
 
-	//// Clear the back buffer and depth buffer.
-	//m_CommandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
-	//m_CommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+	// Iterate through each RenderItem
+	for (const auto& renderItem : m_renderItems)
+	{
+		// Set pipeline state and root signature for the RenderItem's material
+		m_CommandList->SetPipelineState(renderItem->Mat->Shader->GetPSO().Get());
+		m_CommandList->SetGraphicsRootSignature(renderItem->Mat->Shader->GetRootSignature().Get());
 
-	//// Specify the buffers we are going to render to.
-	//m_CommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+		// Set descriptor heaps for the RenderItem's material
+		ID3D12DescriptorHeap* heaps[] = { m_SrvDescriptorHeap.Get() };
+		m_CommandList->SetDescriptorHeaps(_countof(heaps), heaps);
 
-	//ID3D12DescriptorHeap* descriptorHeaps[] = { mSrvDescriptorHeap.Get() };
-	//m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+		// Update constant buffers or other shader resources if needed
+		// For example, you might update the world matrix constant buffer here
 
-	//m_CommandList->SetGraphicsRootSignature(m_RootSignature.Get());
+		// Iterate through each mesh in the RenderItem
+		D3D12_VERTEX_BUFFER_VIEW vBView = renderItem->Mesh->VertexBufferView();
+		m_CommandList->IASetVertexBuffers(0, 1, &vBView);
+		D3D12_INDEX_BUFFER_VIEW iBView = renderItem->Mesh->IndexBufferView();
+		m_CommandList->IASetIndexBuffer(&iBView);
+		m_CommandList->IASetPrimitiveTopology(renderItem->Mesh->PrimitiveType);
 
-	//auto passCB = mCurrFrameResource->PassCB->Resource();
-	//m_CommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
+		// Draw the mesh
+		m_CommandList->DrawIndexedInstanced(renderItem->Mesh->IndexCount, 1, 0, 0, 0);
+	}
 
-	//DrawRenderItems(m_CommandList.Get(), m_renderItems);
+	// Transition the swap chain back buffer to the present state
+	barrier = CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+	m_CommandList->ResourceBarrier(1, &barrier);
 
-	//// Indicate a state transition on the resource usage.
-	//m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
-	//	D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+	// Close the command list
+	ThrowIfFailed(m_CommandList->Close());
 
-	//// Done recording commands.
-	//ThrowIfFailed(m_CommandList->Close());
+	// Execute the command list
+	ID3D12CommandList* cmdLists[] = { m_CommandList.Get() };
+	m_CommandQueue->ExecuteCommandLists(_countof(cmdLists), cmdLists);
 
-	//// Add the command list to the queue for execution.
-	//ID3D12CommandList* cmdsLists[] = { m_CommandList.Get() };
-	//m_CommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+	// Present the frame
+	ThrowIfFailed(m_swapChain->Present(0, 0));
 
-	//// Swap the back and front buffers
-	//ThrowIfFailed(mSwapChain->Present(0, 0));
-	//mCurrBackBuffer = (mCurrBackBuffer + 1) % SwapChainBufferCount;
+	// Advance the fence value to mark the current frame
+	m_CurrentFence++;
 
-	//// Advance the fence value to mark commands up to this fence point.
-	//mCurrFrameResource->Fence = ++mCurrentFence;
-
-	//// Add an instruction to the command queue to set a new fence point. 
-	//// Because we are on the GPU timeline, the new fence point won't be 
-	//// set until the GPU finishes processing all the commands prior to this Signal().
-	//mCommandQueue->Signal(mFence.Get(), mCurrentFence);
+	// Wait for the GPU to finish rendering this frame
+	FlushCommandQueue();
 }
 
 void Engine::BuildDescriptorHeaps()
 {
-	// Create the SRV heap.
+	// Create the SRV heap used localy
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
 	srvHeapDesc.NumDescriptors = 1;
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&mSrvDescriptorHeap)));
+	ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_SrvDescriptorHeap)));
+
+	D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc;
+	rtvHeapDesc.NumDescriptors = 2;
+	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	rtvHeapDesc.NodeMask = 0;
+	ThrowIfFailed(m_device->CreateDescriptorHeap(
+		&rtvHeapDesc, IID_PPV_ARGS(m_RtvHeap.GetAddressOf())));
+
+
+	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
+	dsvHeapDesc.NumDescriptors = 1;
+	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	dsvHeapDesc.NodeMask = 0;
+	ThrowIfFailed(m_device->CreateDescriptorHeap(
+		&dsvHeapDesc, IID_PPV_ARGS(m_DsvHeap.GetAddressOf())));
 
 	// Create materials and fill the heap desc with it 
 	Engine::CreateTextureAndMaterial("Wood");
@@ -390,7 +426,7 @@ void Engine::BuildDescriptorHeaps()
 
 void Engine::CreateTextureAndMaterial(std::string name)
 {
-	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(mSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(m_SrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
 	// ----- Load the texture
 	auto newTexture = std::make_unique<Texture>();
@@ -400,7 +436,6 @@ void Engine::CreateTextureAndMaterial(std::string name)
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_device.Get(),
 		m_CommandList.Get(), newTexture->Filename.c_str(),
 		newTexture->Resource, newTexture->UploadHeap));
-
 
 	// ----- Create the texture
 	auto textResource = newTexture->Resource;
@@ -415,17 +450,15 @@ void Engine::CreateTextureAndMaterial(std::string name)
 	m_device->CreateShaderResourceView(textResource.Get(), &srvDescCobble, hDescriptor);
 
 	// ----- Create material
-	auto textMaterial = std::make_unique<Material>();
+	auto textMaterial = std::make_unique<TextureMaterial>();
 	textMaterial->Name = name;
-	textMaterial->MatCBIndex = 0;
-	textMaterial->DiffuseSrvHeapIndex = 0;
-	textMaterial->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	textMaterial->FresnelR0 = DirectX::XMFLOAT3(0.05f, 0.05f, 0.05f);
-	textMaterial->Roughness = 0.2f;
+	textMaterial->Texture = newTexture.get();
+	textMaterial->Shader = m_Shaders["TextureShader"].get();
 
-	m_Textures[newTexture->Name] = std::move(newTexture);
+	m_Textures[name] = std::move(newTexture);
 	m_Materials[name] = std::move(textMaterial);
 }
+
 void Engine::BuildShapeGeometry() 
 {
 	auto mesh = Mesh::CreateQuad(m_device, m_CommandList);
@@ -442,19 +475,15 @@ void Engine::BuildShaders()
 void Engine::BuildRenderItems() 
 {
 	auto woodQuad = std::make_unique<RenderItem>();
-	woodQuad->ObjCBIndex = 0;
+	woodQuad->Name = "WoodQuad";
 	woodQuad->Mat = m_Materials["Wood"].get();
 	woodQuad->Mesh = m_Meshes["base_quad"].get();
-	woodQuad->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	woodQuad->IndexCount = woodQuad->Mesh->IndexCount;
 	m_renderItems.push_back(std::move(woodQuad));
 
 	auto cobbleQuad = std::make_unique<RenderItem>();
-	cobbleQuad->ObjCBIndex = 1;
+	cobbleQuad->Name = "CobbleQuad";
 	cobbleQuad->Mat = m_Materials["Cobble"].get();
 	cobbleQuad->Mesh = m_Meshes["base_quad"].get();
-	cobbleQuad->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	cobbleQuad->IndexCount = cobbleQuad->Mesh->IndexCount;
 	m_renderItems.push_back(std::move(cobbleQuad));
 }
 

@@ -26,13 +26,6 @@ void Mesh::Clear()
 	i_bufferUploader.Reset();
 }
 
-void Mesh::SetTexture(ComPtr<ID3D12Device> device, LPCWSTR source)
-{
-	// For simplicity, texture creation is not provided here.
-	// You need to implement texture loading for DirectX 12 separately.
-	// Consider using DirectXTex or another texture loading library for DirectX 12.
-}
-
 void Mesh::Draw(ComPtr<ID3D12GraphicsCommandList> commandList, XMMATRIX* posMatrix)
 {
 	// Assuming you have created and recorded commands into the command list elsewhere
