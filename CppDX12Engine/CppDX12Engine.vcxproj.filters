@@ -51,7 +51,16 @@
     <ClCompile Include="DDSTextureLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Shader.h">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TextureShader.h">
+      <Filter>Header Files</Filter>
+    </ClCompile>
     <ClCompile Include="Shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TextureShader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

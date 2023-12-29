@@ -14,7 +14,7 @@
 #include <memory>
 #include "d3dUtil.h"
 #include "Mesh.h"
-#include "Shader.cpp"
+#include "Shader.h"
 
 // Link necessary d3d12 libraries.
 #pragma comment(lib,"d3dcompiler.lib")
@@ -45,12 +45,9 @@ public:
     void FlushCommandQueue();
 
     void BuildDescriptorHeaps();
-    void BuildConstantBuffers();
-    void BuildRootSignature();
-    void BuildShadersAndInputLayout();
+    void BuildShaders();
     void BuildShapeGeometry();
     void BuildRenderItems();
-    void BuildPSOs();
     void CreateTextureAndMaterial(std::string name);
     std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
 
@@ -81,7 +78,7 @@ protected:
 
     std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;
     std::unordered_map<std::string, std::unique_ptr<Texture>> m_Textures;
-    std::unordered_map<std::string, std::unique_ptr<ShaderData>> m_Shaders;
+    std::unordered_map<std::string, std::unique_ptr<Shader>> m_Shaders;
 
     // Viewport dimensions.
     UINT m_width;
@@ -102,8 +99,6 @@ private:
 
     std::unordered_map<std::string, std::unique_ptr<Mesh>> m_Meshes;
     std::vector<std::unique_ptr<RenderItem>> m_renderItems;
-
-    std::vector<D3D12_INPUT_ELEMENT_DESC> m_InputLayout;
 
     UINT m_CbvSrvDescriptorSize = 0;
 
