@@ -106,7 +106,6 @@ protected:
     D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView()const;
 
 private:
-    ComPtr<ID3D12RootSignature> m_RootSignature = nullptr;
     ComPtr<ID3D12DescriptorHeap> m_DescHeap = nullptr;
     ComPtr<ID3D12DescriptorHeap> m_SrvDescriptorHeap = nullptr;
 
