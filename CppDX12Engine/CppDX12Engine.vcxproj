@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DXContext.cpp" />
     <ClCompile Include="DXDebugLayer.cpp" />
     <ClCompile Include="Device.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -27,6 +28,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ComPointer.h" />
+    <ClInclude Include="DXContext.h" />
     <ClInclude Include="DXDebugLayer.h" />
     <ClInclude Include="Device.h" />
     <ClInclude Include="SwapChain.h" />

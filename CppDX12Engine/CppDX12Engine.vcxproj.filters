@@ -51,6 +51,9 @@
     <ClCompile Include="DXDebugLayer.cpp">
       <Filter>Debug</Filter>
     </ClCompile>
+    <ClCompile Include="DXContext.cpp">
+      <Filter>Source Files\Graphics</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Device.h">
@@ -67,6 +70,9 @@
     </ClInclude>
     <ClInclude Include="DXDebugLayer.h">
       <Filter>Debug</Filter>
+    </ClInclude>
+    <ClInclude Include="DXContext.h">
+      <Filter>Header Files\Graphics</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
