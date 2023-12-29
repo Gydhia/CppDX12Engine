@@ -1,18 +1,26 @@
 #include "DXDebugLayer.h"
+#include "iostream"
 
 bool DXDebugLayer::Init()
 {
+
+std::cout << "Entering init"<<std::endl;
 #ifdef _DEBUG
 //init D3D12 Debug Layer
-	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&m_debug))))
+	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&m_d3d12Debug))))
 	{
-		m_debug->EnableDebugLayer();
+
+		m_d3d12Debug->EnableDebugLayer();
 		// Init DXGI Debug
 		if (SUCCEEDED(DXGIGetDebugInterface1(0,IID_PPV_ARGS(&m_dxgiDebug))))
 		{
 			m_dxgiDebug->EnableLeakTrackingForThread();
 			return true;
 		}
+	}
+	else
+	{
+		std::cout << "Not succeed";
 	}
 #endif
 
@@ -29,6 +37,6 @@ void DXDebugLayer::Shutdown()
 	}
 #ifdef _DEBUG
 	m_dxgiDebug.Release();
-	m_debug.Release();
+	m_d3d12Debug.Release();
 #endif // _DEBUG
 }

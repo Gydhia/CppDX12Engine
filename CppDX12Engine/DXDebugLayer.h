@@ -11,7 +11,7 @@ public:
 
 private:
 #ifdef _DEBUG
-	ComPointer<ID3D12Debug6> m_debug;
+	ComPointer<ID3D12Debug3> m_d3d12Debug;
 	ComPointer<IDXGIDebug1> m_dxgiDebug;
  #endif // _DEBUG
 
